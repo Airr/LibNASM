@@ -3,7 +3,7 @@
 ; ===========================
 
 
-%include "../LibNASM/macros.asm"
+%include "macros.asm"
 
 
 segment .data
