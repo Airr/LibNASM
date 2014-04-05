@@ -9,61 +9,49 @@
 segment .data
 	string prompt1, "Please enter a number: "
 	string prompt2, "Please enter another number: "
-	string answerdec, "The decimal sum of these numbers is "
-	string answerhex, "The hexadecimal sum of these numbers is "
-
-	string endl, 10
+	string answer, "The sum of these numbers is "
+	string endl, 10 ; character 10, aka line-break or \n
 
 
 segment .bss
-	char input1, 20 ; char array of 20 characters
-	char input2, 20
-	char outputdec, 20
-	char outputhex, 20
+	char number, 11 ; char array of 11 characters, reused for everything
+					; long values take up to 10 characters, plus one for the line-break
 
-	long_long num1 ; qword
-	long_long num2
+	long number1 ; long = dword
+	long number2
 
 
 segment .text
 	global main
 
 	main:
-		; input 2
-		print prompt1
-		scan input1, 19
+		; input 1
+		print prompt1					; prompt
+		scan number, 10					; read input
+		string_to_long number, number1	; convert
+		clear_string number, 11			; clear
 
 		; input 1
-		print prompt2
-		scan input2, 19
+		print prompt2					; prompt
+		scan number, 10					; read input
+		string_to_long number, number2	; convert
+		clear_string number, 11			; clear
 
-		; conversion
-		string_to_long_long input1, num1
-		string_to_long_long input2, num2
-
-		; operations
-		mov rax, [num1]
-		mov rbx, [num2]
+		; operations (using 64-bit registers here)
+		mov rax, [number1]
+		mov rbx, [number2]
 		add rax, rbx
-		mov [num1], rax
+		mov [number1], rax
 
-		; reconversion
-		long_long_to_string num1, outputdec
-		long_long_to_hexstring num1, outputhex
+		; convert to ascii again
+		long_to_string number1, number
 
-		; dec answer
-		print answerdec
-		printl outputdec, 20
-
-		; hex answer
-		print endl, answerhex
-		printl outputhex, 20
-
-		print endl
+		; answer
+		print answer, number, endl
 
 		exit
 
 
 ; NOTE :
-;	- print autodetects the length of the string to print as long as it ends with a null (\0) characters
+;	- print autodetects the length of the string to print as long as it ends with a null (\0) character
 ;	- printl prints whatever length is specified
