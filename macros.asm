@@ -49,7 +49,7 @@
 
 ; string (declare only)
 %macro string 2+
-	%1 db %2, 0
+	%1: db %2, 0
 %endmacro
 
 
@@ -195,8 +195,8 @@
 ; STRING MANIPULATION MACROS
 ; ============================================
 
-; Fill string with \0
-;>clear_string byte* str, int size
+; Clear n bytes of string str
+;>clear_string str, n
 %macro clear_string 2
 	%%begin:
 		pushad
@@ -205,22 +205,85 @@
 		add rcx, %2
 
 	%%loop:
-		cmp rcx, 0
+		dec rcx
+		mov byte [rcx], 0
 
+		cmp rcx, %1
+		jz %%end
+		jmp %%loop
 
 	%%end:
+		popad
 %endmacro
 
 ; Adjust string
 ;>adjust_string byte* str, int size
 %macro adjust_string 2
-	; TODO
+	%%begin:
+		pushad
+		clear rdi, rsi
+
+		mov rdi, %1
+		mov rsi, rdi
+
+	%%loop:
+		cmp byte [rsi], 0
+		jz %%endloop
+		cmp rsi, rdi
+		jz %%endloop
+
+		mov byte dl, [rsi]
+		mov byte [rdi], dl
+		mov byte [rsi], 0
+
+	%%endloop:
+		; move rsi
+		inc rsi
+		cmp rsi, %1+%2
+		jz %%end
+
+		; move rdi if non-null
+		cmp byte [rdi], 0
+		jz %%loop
+		inc rdi
+		jmp %%loop
+
+	%%end:
+		popad
 %endmacro
 
 
 ; ============================================
 ; CONVERSION MACROS
 ; ============================================
+
+; Convert long to string
+;>long_to_string dword* num, byte* str
+%macro long_to_string 2
+	%%begin:
+		pushad
+
+		mov eax, [%1] ; the number
+		mov ebx, 10 ; divisor
+		mov ecx, 10 ; string cursor, 10-digits for dwords
+
+	%%loop:
+		dec ecx ; adjust cursor
+
+		clear edx
+		div ebx ; divide
+
+		add dl, '0' ; adjust to ascii
+		mov [%2+ecx], dl ; remain
+
+		; looping!
+		cmp eax, 0
+		jnz %%loop
+
+	%%end:
+		popad
+		adjust_string %2, 10
+%endmacro
 
 ; Convert long_long to string
 ;>long_long_to_string qword* num, byte* str
@@ -247,6 +310,7 @@
 
 	%%end:
 		popad
+		adjust_string %2, 20
 %endmacro
 
 ; Convert long_long to hex string
@@ -287,6 +351,37 @@
 
 		dec rcx
 		mov byte [%2+rcx], '0'
+
+		popad
+%endmacro
+
+; Convert string to long
+;>string_to_long_long byte* str, dword* num
+%macro string_to_long 2
+	%%begin:
+		pushad
+
+		clear eax ; int number
+		mov ebx, 10 ; multiplier
+		mov ecx, %1 ; cursor = str
+		clear edx ; char
+
+	%%loop: ; find null character
+		cmp byte [ecx], 0 ; if *ecx == 0
+		jz %%end
+
+		mul ebx ; make space
+		clear edx
+
+		mov dl, [rcx] ; move next char
+		sub dl, '0' ; adjust char
+		add eax, edx ; send to int
+
+		inc ecx ; move cursor
+		jmp %%loop ; go back
+
+	%%end:
+		mov [%2], eax
 
 		popad
 %endmacro
